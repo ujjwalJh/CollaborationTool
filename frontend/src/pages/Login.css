@@ -1,0 +1,143 @@
+/* FULLSCREEN LOGIN PAGE */
+.login-page {
+  height: 100vh;
+  width: 100%;
+  background: url("/images/bg-dark-pattern.jpg"), linear-gradient(to bottom, #0a0a0a, #1b1b1b);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Poppins", sans-serif;
+}
+
+/* LOGIN CARD */
+.login-card {
+  width: 420px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  color: #ededed;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.45);
+  animation: fadeIn 0.5s ease;
+}
+
+/* TITLE */
+.login-card h2 {
+  text-align: center;
+  font-size: 27px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.login-subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: #aaaaaa;
+  margin-bottom: 20px;
+}
+
+.login-subtitle a {
+  color: #9b7cff;
+  text-decoration: none;
+}
+
+/* LABEL */
+.login-card label {
+  display: block;
+  margin: 16px 0 6px;
+  color: #c5c5c5;
+  font-size: 14px;
+}
+
+/* INPUT WRAPPER WITH ICON */
+.input-wrapper {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 17px;
+  opacity: 0.7;
+}
+
+/* INPUT FIELDS */
+.login-card input {
+  width: 100%;
+  padding: 12px 14px 12px 40px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.login-card input:focus {
+  background: #181818;
+  border-color: #6c4dff;
+}
+
+/* OPTIONS ROW */
+.login-options {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.login-options a {
+  color: #9b7cff;
+}
+
+/* LOGIN BUTTON */
+.login-card button {
+  width: 100%;
+  padding: 13px;
+  margin-top: 25px;
+  background: #6c4dff;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.login-card button:hover {
+  background: #7b5aff;
+}
+
+.login-card button:disabled {
+  background: #333;
+}
+
+/* ERROR BOX */
+.login-error {
+  background: rgba(255, 40, 40, 0.15);
+  border: 1px solid rgba(255, 40, 40, 0.35);
+  padding: 10px;
+  border-radius: 6px;
+  color: #ff9d9d;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+/* FADE IN ANIMATION */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

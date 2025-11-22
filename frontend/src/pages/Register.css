@@ -1,0 +1,126 @@
+/* FULLSCREEN PAGE */
+.register-page {
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(to bottom, #0a0a0a, #1b1b1b);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Poppins", sans-serif;
+}
+
+/* CARD */
+.register-card {
+  width: 440px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px);
+  color: #ededed;
+  animation: fadeIn 0.5s ease;
+}
+
+/* TITLE */
+.register-card h2 {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.register-subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 20px;
+}
+
+.register-subtitle a {
+  color: #9b7cff;
+  text-decoration: none;
+}
+
+/* LABELS */
+.register-card label {
+  display: block;
+  margin: 16px 0 6px;
+  color: #c5c5c5;
+  font-size: 14px;
+}
+
+/* INPUT WRAPPER WITH ICON */
+.input-wrapper {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  opacity: 0.75;
+}
+
+/* INPUTS */
+.register-card input {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: white;
+  transition: .2s;
+}
+
+.register-card input:focus {
+  border-color: #6c4dff;
+  background: #181818;
+}
+
+/* BUTTON */
+.register-card button {
+  margin-top: 25px;
+  width: 100%;
+  padding: 13px;
+  background: #6c4dff;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+  transition: .25s ease;
+}
+
+.register-card button:hover {
+  background: #7b5aff;
+}
+
+.register-card button:disabled {
+  background: #3a3a3a;
+}
+
+/* ERROR BOX */
+.register-error {
+  background: rgba(255, 50, 50, 0.12);
+  padding: 10px;
+  border: 1px solid rgba(255, 50, 50, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  color: #ff9d9d;
+}
+
+/* FADE-IN ANIMATION */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
