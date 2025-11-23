@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.collaborationTool.dto.RegisterRequest;
-import com.collaborationTool.model.Role;
 import com.collaborationTool.model.User;
 import com.collaborationTool.repository.UserRepository;
 import com.collaborationTool.security.JwtUtil;
@@ -41,7 +40,6 @@ public class AuthController {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .username(request.getUsername())
-                .role(Role.USER)
                 .build();
 
         userRepository.save(user);
