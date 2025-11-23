@@ -129,14 +129,14 @@ public class CollabController {
     /**
      * PRESENCE / CURSOR HANDLER
      */
-    @MessageMapping("/presence")
-    public void onPresence(PresenceMessage p) {
-        if (p == null || p.getDocId() == null) {
-            log.warn("Invalid presence message: {}", p);
-            return;
-        }
+    // @MessageMapping("/presence")
+    // public void onPresence(PresenceMessage p) {
+    //     if (p == null || p.getDocId() == null) {
+    //         log.warn("Invalid presence message: {}", p);
+    //         return;
+    //     }
 
-        final String topic = "/topic/presence." + p.getDocId();
-        messaging.convertAndSend(topic, p);
-    }
+    //     final String topic = "/topic/presence." + p.getDocId();
+    //     messaging.convertAndSend(topic, p);
+    // }
 }

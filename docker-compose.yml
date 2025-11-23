@@ -15,6 +15,17 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: collab_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
   backend:
     build:
       context: ./backend
@@ -22,10 +33,13 @@ services:
     container_name: collab_backend
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_REDIS_HOST: redis       # <— CORRECT
+      SPRING_REDIS_PORT: 6379
     ports:
       - "8080:8080"
     depends_on:
       - postgres
+      - redis
     restart: always
     networks:
       - app-network
@@ -55,3 +69,4 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:

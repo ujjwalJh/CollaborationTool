@@ -15,10 +15,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Autowired
     private JwtHandshakeInterceptor jwtHandshakeInterceptor;
 
+    @Autowired
+    private WebSocketHandshakeConfig handshakeHandler;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
 
         registry.addEndpoint("/ws")
+                .setHandshakeHandler(handshakeHandler)   // ⭐ VERY IMPORTANT
                 .setAllowedOriginPatterns(
                         "http://localhost:3000",
                         "http://127.0.0.1:3000"
@@ -29,13 +33,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic", "/presence");
+        // simple broker handles broadcasts (/topic/**)
+        registry.enableSimpleBroker("/topic");
+
+        // app messages go to controllers (@MessageMapping)
         registry.setApplicationDestinationPrefixes("/app");
     }
 
-    // THIS is the correct way to apply your JWT interceptor
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
+        // apply JWT validation to CONNECT / SUBSCRIBE
         registration.interceptors(jwtHandshakeInterceptor);
     }
 }

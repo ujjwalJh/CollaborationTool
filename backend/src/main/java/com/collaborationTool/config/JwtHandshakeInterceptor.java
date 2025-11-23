@@ -24,14 +24,13 @@ import com.collaborationTool.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Intercepts inbound STOMP frames.
+ * WebSocket STOMP security:
  *
- * Responsibilities:
- *  - On CONNECT: validate JWT and attach a Principal (username/email).
- *  - On SUBSCRIBE: validate that the authenticated user is allowed to subscribe to the destination
- *    (e.g. /topic/doc.{docId} or /topic/presence.{docId}) by checking workspace membership/ownership.
- *
- * If the check fails we throw an exception which prevents the subscription/connection.
+ *  - CONNECT: Validate JWT and attach Principal
+ *  - SUBSCRIBE: Verify workspace permission for topic (doc or presence)
+ * 
+ * FIXED: Principal is now stored in session attributes so SUBSCRIBE 
+ * always receives the authenticated user (even with SockJS).
  */
 @Component
 @RequiredArgsConstructor
@@ -50,9 +49,11 @@ public class JwtHandshakeInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
         StompCommand command = accessor.getCommand();
 
-        // ---------- CONNECT: validate JWT and set Principal ----------
+        /* =======================================================
+         * CONNECT — Validate JWT and store Principal in session
+         * ======================================================= */
         if (StompCommand.CONNECT.equals(command)) {
-            // Try typical Authorization header first
+
             String authHeader = accessor.getFirstNativeHeader("Authorization");
             String token = null;
 
@@ -60,67 +61,63 @@ public class JwtHandshakeInterceptor implements ChannelInterceptor {
                 token = authHeader.substring(7).trim();
             }
 
-            // fallback: some clients send token header named "token"
             if (token == null || token.isBlank()) {
-                String t = accessor.getFirstNativeHeader("token");
-                if (t != null && !t.isBlank()) token = t.trim();
+                token = accessor.getFirstNativeHeader("token");
             }
 
             if (token == null || token.isBlank()) {
-                log.warn("WebSocket CONNECT missing token header");
-                throw new IllegalArgumentException("Missing JWT token for WebSocket CONNECT");
+                log.warn("WS CONNECT missing token");
+                throw new IllegalArgumentException("Missing token");
             }
 
             if (!jwtUtil.validateToken(token)) {
-                log.warn("WebSocket CONNECT invalid token");
-                throw new IllegalArgumentException("Invalid JWT token for WebSocket CONNECT");
+                log.warn("WS CONNECT invalid token");
+                throw new IllegalArgumentException("Invalid token");
             }
 
             String email = jwtUtil.extractUsername(token);
-            if (email == null || email.isBlank()) {
-                log.warn("WebSocket CONNECT token has no subject (username/email)");
-                throw new IllegalArgumentException("Invalid JWT token (no subject)");
-            }
 
-            // set a minimal Principal so downstream can get principal name()
-            Principal userPrincipal = new Principal() {
-                @Override
-                public String getName() {
-                    return email;
-                }
-            };
+            Principal principal = () -> email;
 
-            accessor.setUser(userPrincipal);
-            log.debug("WebSocket CONNECT accepted for user={}", email);
+            // STORE PRINCIPAL FOR FUTURE FRAMES (SockJS fix)
+            accessor.setUser(principal);
+            accessor.getSessionAttributes().put("USER_PRINCIPAL", principal);
+
+            log.info("WS CONNECT authenticated: {}", email);
             return message;
         }
 
-        // ---------- SUBSCRIBE: validate destination access ----------
+        /* =======================================================
+         * SUBSCRIBE — Validate access to doc/presence channel
+         * ======================================================= */
         if (StompCommand.SUBSCRIBE.equals(command)) {
+
+            // Retrieve principal from accessor or session map
             Principal principal = accessor.getUser();
-            if (principal == null || principal.getName() == null) {
-                log.warn("SUBSCRIBE without authenticated principal");
+            if (principal == null) {
+                principal = (Principal) accessor.getSessionAttributes().get("USER_PRINCIPAL");
+            }
+
+            if (principal == null) {
+                log.warn("SUBSCRIBE missing principal");
                 throw new IllegalArgumentException("Not authenticated");
             }
 
             String destination = accessor.getDestination();
-            if (destination == null || destination.isBlank()) {
-                // Allow subscriptions that don't target protected destinations
-                return message;
+            if (destination == null) {
+                return message; // ignore unknown topics
             }
 
-            // We only enforce for doc / presence topics used by editor:
-            // e.g. "/topic/doc.123" or "/topic/presence.123"
             Long docId = extractDocIdFromDestination(destination);
             if (docId == null) {
-                // Not a doc/presence topic we care about, allow
-                return message;
+                return message; // not a protected topic
             }
 
             String email = principal.getName();
             Optional<User> userOpt = userRepository.findByEmail(email);
+
             if (userOpt.isEmpty()) {
-                log.warn("Authenticated principal not found in DB: {}", email);
+                log.warn("SUBSCRIBE user not found: {}", email);
                 throw new IllegalArgumentException("User not found");
             }
 
@@ -129,70 +126,51 @@ public class JwtHandshakeInterceptor implements ChannelInterceptor {
             Optional<Doc> docOpt = docRepository.findById(docId);
             if (docOpt.isEmpty()) {
                 log.warn("SUBSCRIBE to non-existing doc: {}", docId);
-                throw new IllegalArgumentException("Document not found");
+                throw new IllegalArgumentException("Doc not found");
             }
 
             Doc doc = docOpt.get();
             Workspace ws = doc.getWorkspace();
-            if (ws == null) {
-                log.warn("Document {} missing workspace relation", docId);
-                throw new IllegalArgumentException("Document workspace missing");
-            }
 
-            // Final permission check: owner or member allowed
             if (!permissionService.isOwnerOrMember(user, ws)) {
-                log.info("User {} is not member/owner of workspace {} -> deny subscribe to doc {}", user.getEmail(), ws.getId(), docId);
-                throw new IllegalArgumentException("Forbidden: not a member of workspace");
+                log.info("Forbidden SUBSCRIBE: {} not member of workspace {}", email, ws.getId());
+                throw new IllegalArgumentException("Forbidden");
             }
 
-            // allowed
-            log.debug("User {} allowed to subscribe to doc {} (workspace {})", user.getEmail(), docId, ws.getId());
+            log.debug("SUBSCRIBE allowed: {} -> doc {}", email, docId);
             return message;
         }
 
-        // For other frames, pass through
         return message;
     }
 
-    /**
-     * Helper: extract numeric doc id from destinations like:
-     *  - /topic/doc.123
-     *  - /topic/presence.123
-     *
-     * Returns null if the destination is not a recognized doc/presence topic.
-     */
+    /* =======================================================
+     * Extract docId from:
+     *   /topic/doc.123
+     *   /topic/presence.123
+     *   /topic/doc/123
+     *   /topic/presence/123
+     * ======================================================= */
     private Long extractDocIdFromDestination(String destination) {
-        if (destination == null) return null;
 
-        // common prefixes we protect
         List<String> prefixes = List.of("/topic/doc.", "/topic/presence.", "/topic/presence/");
+
         for (String prefix : prefixes) {
             if (destination.startsWith(prefix)) {
                 String tail = destination.substring(prefix.length());
-                // tail may contain extra path segments or query — attempt to parse leading number
                 StringBuilder sb = new StringBuilder();
                 for (char c : tail.toCharArray()) {
-                    if (Character.isDigit(c)) sb.append(c);
-                    else break;
+                    if (Character.isDigit(c)) sb.append(c); else break;
                 }
-                if (sb.length() == 0) return null;
-                try {
+                if (sb.length() > 0) {
                     return Long.valueOf(sb.toString());
-                } catch (NumberFormatException e) {
-                    return null;
                 }
             }
         }
 
-        // also support pattern "/topic/doc/" + id
-        if (destination.startsWith("/topic/doc/") || destination.startsWith("/topic/presence/")) {
-            String[] parts = destination.split("/");
-            String last = parts[parts.length - 1];
-            try {
-                return Long.valueOf(last);
-            } catch (NumberFormatException e) {
-                return null;
-            }
+        if (destination.startsWith("/topic/doc/")) {
+            try { return Long.valueOf(destination.substring(11)); }
+            catch (Exception e) { return null; }
         }
 
         return null;

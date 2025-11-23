@@ -1,167 +1,206 @@
-// frontend/src/pages/EditorPage.jsx
-import React, { useEffect, useRef, useContext, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-
-import api from "../api/axios";
+import React, { useEffect, useRef, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
 
-import {
-  connectWs,
-  disconnectWs,
-  sendEdit,
-  sendPresence
-} from "../ws/socket";
+export default function EditorPage({ docId }) {
+  const { token, user } = useContext(AuthContext);
 
-export default function EditorPage() {
-  const { docId } = useParams();
-  const navigate = useNavigate();
-  const { user, token } = useContext(AuthContext);
+  const [presence, setPresence] = useState({});
+  const [content, setContent] = useState("");
 
-  const clientIdRef = useRef(Math.random().toString(36).substring(2));
-  const sendTimeoutRef = useRef(null);
+  const stompRef = useRef(null);
+  const clientIdRef = useRef(null);
+  const textareaRef = useRef(null);
 
-  const [connected, setConnected] = useState(false);
-  const [docMeta, setDocMeta] = useState(null);
+  const docIdRef = useRef(docId);
+  useEffect(() => (docIdRef.current = docId), [docId]);
 
-  // ------------------------------
-  // CREATE TIPTAP EDITOR
-  // ------------------------------
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: "<p>Loading…</p>",
-
-    onUpdate: ({ editor }) => {
-      if (sendTimeoutRef.current) clearTimeout(sendTimeoutRef.current);
-
-      sendTimeoutRef.current = setTimeout(() => {
-        const json = editor.getJSON();
-        const payload = JSON.stringify(json);
-
-        sendEdit({
-          docId,
-          user: user?.email || "anonymous",
-          clientId: clientIdRef.current,
-          content: payload,
-          timestamp: Date.now(),
-        });
-      }, 400);
-    },
-  });
-
-  // ------------------------------
-  // LOAD INITIAL CONTENT FROM DB
-  // ------------------------------
+  // -----------------------
+  // CONNECT TO STOMP
+  // -----------------------
   useEffect(() => {
-    if (!docId || !editor) return;
+    const socket = new SockJS(`http://localhost:8080/ws?token=${token}`);
 
-    api.get(`/api/docs/${docId}`).then((res) => {
-      setDocMeta(res.data);
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      debug: (msg) => console.log(msg),
+      onConnect: () => {
+        console.log("STOMP CONNECTED");
 
-      let content = res.data.content;
+        // Generate client ID
+        if (!clientIdRef.current) {
+          clientIdRef.current =
+            crypto.randomUUID?.() ||
+            Math.random().toString(36).substring(2, 10);
+        }
 
-      if (!content || content === "[0,0]") {
-        content = JSON.stringify({
-          type: "doc",
-          content: [{ type: "paragraph", content: [] }],
-        });
-      }
+        // Subscribe to presence updates
+        stompClient.subscribe(
+          `/topic/presence.${docIdRef.current}`,
+          (message) => {
+            const data = JSON.parse(message.body);
+            console.log("PRESENCE EVENT:", data);
 
-      try {
-        editor.commands.setContent(JSON.parse(content), false);
-      } catch (e) {
-        console.warn("Invalid stored content. Resetting.");
-
-        editor.commands.setContent(
-          {
-            type: "doc",
-            content: [{ type: "paragraph", content: [] }],
-          },
-          false
+            handlePresenceEvent(data);
+          }
         );
-      }
+
+        // Announce join
+        sendPresence("join");
+      },
+      onStompError: (frame) => console.error("STOMP ERROR", frame)
     });
-  }, [docId, editor]);
 
-  // ------------------------------
-  // CONNECT TO STOMP WEBSOCKET
-  // ------------------------------
-  // ---- CONNECT WS ----
-useEffect(() => {
-  if (!token || !docId || !editor) return;
+    stompClient.activate();
+    stompRef.current = stompClient;
 
-  let mounted = true;
-
-  connectWs({
-    token,
-    docId,
-
-    onConnect: () => {
-      if (!mounted) return;
-
-      setConnected(true);
-
-      sendPresence({
-        docId,
-        user: user?.email || "anonymous",
-        action: "join",
-        timestamp: Date.now(),
-      });
-    },
-
-    onMessage: (msg) => {
-      if (!mounted) return;
-      if (!msg) return;
-      if (msg.action) return;
-      if (msg.clientId === clientIdRef.current) return;
-
-      if (msg.content) {
-        try {
-          editor.commands.setContent(JSON.parse(msg.content), false);
-        } catch {}
+    return () => {
+      if (stompRef.current?.connected) {
+        sendPresence("leave");
+        stompRef.current.deactivate();
       }
-    },
-  });
+    };
+  }, [docId, token]);
 
-  return () => {
-    mounted = false;
+  // -----------------------
+  // SEND JOIN / LEAVE / CURSOR
+  // -----------------------
+  const sendPresence = (type, cursor = null) => {
+    if (!stompRef.current?.connected) return;
 
-    // Only send presence if fully connected
-    if (connected) {
-      sendPresence({
-        docId,
-        user: user?.email || "anonymous",
-        action: "leave",
-        timestamp: Date.now(),
-      });
-    }
+    const msg = {
+      type,
+      docId: String(docIdRef.current),
+      user: user?.username || user?.email,
+      userId: user?.id,
+      clientId: clientIdRef.current,
+      cursor // { position }
+    };
 
-    disconnectWs();
-    setConnected(false);
+    stompRef.current.publish({
+      destination: "/app/presence",
+      body: JSON.stringify(msg)
+    });
   };
-}, [token, docId, editor]);
 
+  // -----------------------
+  // HANDLE INCOMING PRESENCE EVENTS
+  // -----------------------
+  const handlePresenceEvent = (msg) => {
+    setPresence((prev) => {
+      const next = { ...prev };
 
-  // ------------------------------
-  // RENDER
-  // ------------------------------
-  if (!editor)
-    return <div style={{ padding: 20 }}>Loading editor…</div>;
+      if (msg.type === "join") {
+        next[msg.clientId] = {
+          user: msg.user,
+          cursor: null
+        };
+      }
+
+      if (msg.type === "leave") {
+        delete next[msg.clientId];
+      }
+
+      if (msg.type === "cursor") {
+        if (next[msg.clientId]) {
+          next[msg.clientId].cursor = msg.cursor;
+        }
+      }
+
+      return next;
+    });
+  };
+
+  // -----------------------
+  // SEND CURSOR ON TEXTAREA CHANGE
+  // -----------------------
+  const handleCursorMove = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart;
+
+    sendPresence("cursor", { position: cursorPos });
+  };
+
+  // -----------------------
+  // RENDER REMOTE CURSORS
+  // -----------------------
+  const renderRemoteCursors = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return null;
+
+    const text = content;
+    const lines = text.split("\n");
+    const cursorMarkers = [];
+
+    Object.entries(presence).forEach(([id, p]) => {
+      if (!p.cursor || id === clientIdRef.current) return;
+
+      const pos = p.cursor.position;
+
+      // Convert cursor position to row/column
+      let row = 0, col = pos;
+      for (let i = 0; i < lines.length; i++) {
+        if (col <= lines[i].length) {
+          row = i;
+          break;
+        }
+        col -= lines[i].length + 1;
+      }
+
+      cursorMarkers.push(
+        <div
+          key={id}
+          style={{
+            position: "absolute",
+            top: row * 20,
+            left: col * 9,
+            background: "red",
+            width: "2px",
+            height: "20px"
+          }}
+        ></div>
+      );
+    });
+
+    return cursorMarkers;
+  };
 
   return (
-    <div style={{ padding: 20, color: "white" }}>
-      <h2>{docMeta?.title || `Document #${docId}`}</h2>
-
-      <div style={{ marginBottom: 10 }}>
-        Realtime:{" "}
-        <span style={{ color: connected ? "#22c55e" : "#ef4444" }}>
-          {connected ? "Connected" : "Disconnected"}
-        </span>
+    <div className="editor-page" style={{ display: "flex", flexDirection: "column" }}>
+      
+      {/* Presence Bar */}
+      <div className="presence-bar" style={{ padding: "10px", display: "flex", gap: "10px" }}>
+        {Object.keys(presence).map((id) => (
+          <div key={id} style={{ padding: "4px 8px", background: "#ddd", borderRadius: "6px" }}>
+            {presence[id].user}
+          </div>
+        ))}
       </div>
 
-      <EditorContent editor={editor} />
+      {/* Editor */}
+      <div style={{ position: "relative", padding: "20px" }}>
+        <textarea
+          ref={textareaRef}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyUp={handleCursorMove}
+          onClick={handleCursorMove}
+          onSelect={handleCursorMove}
+          style={{
+            width: "100%",
+            height: "500px",
+            fontSize: "16px",
+            lineHeight: "20px"
+          }}
+        />
+
+        {/* Remote cursors */}
+        {renderRemoteCursors()}
+      </div>
     </div>
   );
 }
