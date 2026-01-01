@@ -1,28 +1,17 @@
 import axios from "axios";
-
-// ------------------------
-// 📌 API INSTANCE
-// ------------------------
 const api = axios.create({
     baseURL: "http://localhost:8080",
     withCredentials: false,
 });
 
-// ------------------------
-// 📌 Routes that DO NOT require token
-// ------------------------
 const noAuthNeeded = [
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/refresh"
 ];
 
-// ------------------------
-// 📌 Request Interceptor
-// ------------------------
 api.interceptors.request.use(
     (config) => {
-        // Skip adding token for open routes
         if (!noAuthNeeded.some((url) => config.url.includes(url))) {
             const token = localStorage.getItem("token");
             if (token) {
@@ -35,9 +24,6 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// ------------------------
-// 📌 Refresh Token Logic
-// ------------------------
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -50,27 +36,22 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
-// ------------------------
-// 📌 Response Interceptor
-// ------------------------
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        // Normalize error message
         const backendMessage =
             error?.response?.data?.message ||
             error?.response?.data?.error ||
             "Something went wrong.";
 
-        // Handle 401 Unauthorized (Expired Token)
         if (error.response?.status === 401 && !originalRequest._retry) {
             if (noAuthNeeded.some((url) => originalRequest.url.includes(url))) {
                 return Promise.reject(error);
             }
 
-            // Avoid infinite loop
+            
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -99,7 +80,7 @@ api.interceptors.response.use(
                 const newToken = res.data.token;
                 const newRefreshToken = res.data.refreshToken;
 
-                // Store new tokens
+                
                 localStorage.setItem("token", newToken);
                 localStorage.setItem("refreshToken", newRefreshToken);
 
@@ -117,7 +98,7 @@ api.interceptors.response.use(
             }
         }
 
-        // Handle 403 Forbidden
+
         if (error.response?.status === 403) {
             logoutAndRedirect();
         }
@@ -128,10 +109,6 @@ api.interceptors.response.use(
         });
     }
 );
-
-// ------------------------
-// 📌 Logout & Redirect Helper
-// ------------------------
 function logoutAndRedirect() {
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");

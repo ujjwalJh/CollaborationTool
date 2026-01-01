@@ -2,204 +2,230 @@ import React, { useEffect, useRef, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import { useParams } from "react-router-dom";
+import "./editor.css";
 
-export default function EditorPage({ docId }) {
+export default function EditorPage() {
+  const { docId } = useParams();
   const { token, user } = useContext(AuthContext);
 
   const [presence, setPresence] = useState({});
   const [content, setContent] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
   const stompRef = useRef(null);
-  const clientIdRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const docIdRef = useRef(docId);
-  useEffect(() => (docIdRef.current = docId), [docId]);
+  const clientIdRef = useRef(
+    sessionStorage.getItem("clientId") ||
+      (() => {
+        const id = crypto.randomUUID();
+        sessionStorage.setItem("clientId", id);
+        return id;
+      })()
+  );
 
-  // -----------------------
-  // CONNECT TO STOMP
-  // -----------------------
   useEffect(() => {
+    if (!docId || !token) return;
+
+    fetch(`http://localhost:8080/api/docs/${docId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load doc");
+        return r.json();
+      })
+      .then((doc) => {
+        setContent(doc.content || "");
+        setLoaded(true);
+      })
+      .catch(console.error);
+  }, [docId, token]);
+
+
+  useEffect(() => {
+    if (!loaded || stompRef.current) return;
+
     const socket = new SockJS(`http://localhost:8080/ws?token=${token}`);
 
-    const stompClient = new Client({
+    const client = new Client({
       webSocketFactory: () => socket,
       connectHeaders: { Authorization: `Bearer ${token}` },
-      debug: (msg) => console.log(msg),
+
       onConnect: () => {
-        console.log("STOMP CONNECTED");
-
-        // Generate client ID
-        if (!clientIdRef.current) {
-          clientIdRef.current =
-            crypto.randomUUID?.() ||
-            Math.random().toString(36).substring(2, 10);
-        }
-
-        // Subscribe to presence updates
-        stompClient.subscribe(
-          `/topic/presence.${docIdRef.current}`,
-          (message) => {
-            const data = JSON.parse(message.body);
-            console.log("PRESENCE EVENT:", data);
-
-            handlePresenceEvent(data);
+        client.subscribe(`/topic/doc.${docId}`, (msg) => {
+          const data = JSON.parse(msg.body);
+          if (data.clientId === clientIdRef.current) return;
+          if (typeof data.content === "string") {
+            setContent(data.content);
           }
-        );
+        });
+        client.subscribe(`/topic/presence.${docId}`, (msg) => {
+          handlePresenceEvent(JSON.parse(msg.body));
+        });
 
-        // Announce join
         sendPresence("join");
-      },
-      onStompError: (frame) => console.error("STOMP ERROR", frame)
+      }
     });
 
-    stompClient.activate();
-    stompRef.current = stompClient;
+    client.activate();
+    stompRef.current = client;
 
     return () => {
       if (stompRef.current?.connected) {
         sendPresence("leave");
         stompRef.current.deactivate();
+        stompRef.current = null;
       }
     };
-  }, [docId, token]);
+  }, [loaded, docId, token]);
 
-  // -----------------------
-  // SEND JOIN / LEAVE / CURSOR
-  // -----------------------
-  const sendPresence = (type, cursor = null) => {
-    if (!stompRef.current?.connected) return;
-
-    const msg = {
-      type,
-      docId: String(docIdRef.current),
-      user: user?.username || user?.email,
-      userId: user?.id,
-      clientId: clientIdRef.current,
-      cursor // { position }
-    };
-
-    stompRef.current.publish({
-      destination: "/app/presence",
-      body: JSON.stringify(msg)
+  const sendEdit = (value) => {
+    stompRef.current?.publish({
+      destination: "/app/edit",
+      body: JSON.stringify({
+        docId: String(docId),
+        user: user?.email,
+        clientId: clientIdRef.current,
+        content: value,
+        timestamp: Date.now()
+      })
     });
   };
 
-  // -----------------------
-  // HANDLE INCOMING PRESENCE EVENTS
-  // -----------------------
+  const sendPresence = (type, cursor = null) => {
+    stompRef.current?.publish({
+      destination: "/app/presence",
+      body: JSON.stringify({
+        type,
+        docId: String(docId),
+        user: user?.email,
+        clientId: clientIdRef.current,
+        cursor
+      })
+    });
+  };
+
   const handlePresenceEvent = (msg) => {
+    if (!msg.clientId || !msg.user) return;
+
     setPresence((prev) => {
       const next = { ...prev };
 
-      if (msg.type === "join") {
-        next[msg.clientId] = {
-          user: msg.user,
-          cursor: null
-        };
-      }
-
       if (msg.type === "leave") {
         delete next[msg.clientId];
+        return next;
       }
 
-      if (msg.type === "cursor") {
-        if (next[msg.clientId]) {
-          next[msg.clientId].cursor = msg.cursor;
-        }
-      }
+      next[msg.clientId] = {
+        user: msg.user,
+        cursor: msg.cursor || null
+      };
 
       return next;
     });
   };
 
-  // -----------------------
-  // SEND CURSOR ON TEXTAREA CHANGE
-  // -----------------------
+
   const handleCursorMove = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const cursorPos = textarea.selectionStart;
-
-    sendPresence("cursor", { position: cursorPos });
+    const el = textareaRef.current;
+    if (!el) return;
+    sendPresence("cursor", { position: el.selectionStart });
   };
 
-  // -----------------------
-  // RENDER REMOTE CURSORS
-  // -----------------------
   const renderRemoteCursors = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return null;
+  const textarea = textareaRef.current;
+  if (!textarea) return null;
 
-    const text = content;
-    const lines = text.split("\n");
-    const cursorMarkers = [];
+  const lines = content.split("\n");
 
-    Object.entries(presence).forEach(([id, p]) => {
-      if (!p.cursor || id === clientIdRef.current) return;
+  return Object.entries(presence).map(([clientId, p]) => {
+    if (!p.cursor) return null;
+    if (p.user === user?.email) return null; // hide own cursor
 
-      const pos = p.cursor.position;
+    let pos = p.cursor.position;
+    let row = 0;
+    let col = pos;
 
-      // Convert cursor position to row/column
-      let row = 0, col = pos;
-      for (let i = 0; i < lines.length; i++) {
-        if (col <= lines[i].length) {
-          row = i;
-          break;
-        }
-        col -= lines[i].length + 1;
+    for (let i = 0; i < lines.length; i++) {
+      if (col <= lines[i].length) {
+        row = i;
+        break;
       }
+      col -= lines[i].length + 1;
+    }
 
-      cursorMarkers.push(
+    const top = row * 20 + 12;  
+    const left = col * 9 + 12;   
+
+    return (
+      <div
+        key={clientId}
+        style={{
+          position: "absolute",
+          top,
+          left,
+          pointerEvents: "none",
+          zIndex: 10
+        }}
+      >
         <div
-          key={id}
           style={{
             position: "absolute",
-            top: row * 20,
-            left: col * 9,
-            background: "red",
-            width: "2px",
-            height: "20px"
+            top: -18,
+            left: 0,
+            background: "#ef4444",
+            color: "white",
+            fontSize: 11,
+            padding: "2px 6px",
+            borderRadius: 4,
+            whiteSpace: "nowrap"
           }}
-        ></div>
-      );
-    });
+        >
+          {p.user}
+        </div>
 
-    return cursorMarkers;
-  };
-
-  return (
-    <div className="editor-page" style={{ display: "flex", flexDirection: "column" }}>
-      
-      {/* Presence Bar */}
-      <div className="presence-bar" style={{ padding: "10px", display: "flex", gap: "10px" }}>
-        {Object.keys(presence).map((id) => (
-          <div key={id} style={{ padding: "4px 8px", background: "#ddd", borderRadius: "6px" }}>
-            {presence[id].user}
-          </div>
-        ))}
-      </div>
-
-      {/* Editor */}
-      <div style={{ position: "relative", padding: "20px" }}>
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyUp={handleCursorMove}
-          onClick={handleCursorMove}
-          onSelect={handleCursorMove}
+        <div
           style={{
-            width: "100%",
-            height: "500px",
-            fontSize: "16px",
-            lineHeight: "20px"
+            width: 2,
+            height: 20,
+            background: "#ef4444",
+            animation: "blink 1s steps(1) infinite"
           }}
         />
+      </div>
+    );
+  });
+};
+  return (
+    <div className="editor-page">
+      <div className="presence-bar">
+        {Object.entries(presence)
+          .filter(([id]) => id !== clientIdRef.current)
+          .map(([id, p]) => (
+            <div key={id} className="presence-pill">
+              {p.user}
+            </div>
+          ))}
+      </div>
 
-        {/* Remote cursors */}
-        {renderRemoteCursors()}
+      <div className="editor-container">
+        <div className="editor-wrapper">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            wrap="off"
+            onChange={(e) => {
+              setContent(e.target.value);
+              sendEdit(e.target.value);
+            }}
+            onKeyUp={handleCursorMove}
+            onClick={handleCursorMove}
+            onSelect={handleCursorMove}
+            className="editor-textarea"
+          />
+          {renderRemoteCursors()}
+        </div>
       </div>
     </div>
   );

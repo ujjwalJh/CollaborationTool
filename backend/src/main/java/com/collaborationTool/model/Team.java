@@ -36,7 +36,6 @@ public class Team {
     @Column(nullable = false, unique = true)
     private String name;
 
-    // Many teams can have many users
     @ManyToMany
     @JoinTable(
         name = "team_members",
@@ -46,7 +45,6 @@ public class Team {
     @Builder.Default
     private Set<User> members = new HashSet<>();
 
-    // One team can have many projects
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<Project> projects = new HashSet<>();

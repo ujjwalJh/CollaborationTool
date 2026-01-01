@@ -1,8 +1,7 @@
-// pages/Login.jsx
 import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import "./login.css";  // Updated CSS file name
+import "./login.css";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -43,8 +42,7 @@ export default function Login() {
         {error && <p className="login-error">{error}</p>}
 
         <form onSubmit={handleSubmit}>
-          
-          {/* Username/Email */}
+        
           <label>Email Address</label>
           <div className="input-wrapper">
             <span className="input-icon">📧</span>
@@ -57,8 +55,6 @@ export default function Login() {
               required
             />
           </div>
-
-          {/* Password */}
           <label>Password</label>
           <div className="input-wrapper">
             <span className="input-icon">🔒</span>

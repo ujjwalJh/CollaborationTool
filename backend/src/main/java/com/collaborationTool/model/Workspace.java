@@ -35,7 +35,6 @@ public class Workspace {
     @Column(nullable = false)
     private String name;
 
-    // owner of workspace
     @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;

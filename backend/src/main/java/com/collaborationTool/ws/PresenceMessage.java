@@ -18,9 +18,6 @@ public class PresenceMessage implements Serializable {
 
     public PresenceMessage() {}
 
-    // -------------------------
-    // Convert object → JSON
-    // -------------------------
     public String toJson() {
         try {
             return mapper.writeValueAsString(this);
@@ -29,9 +26,6 @@ public class PresenceMessage implements Serializable {
         }
     }
 
-    // -------------------------
-    // Convert JSON → object
-    // -------------------------
     public static PresenceMessage fromJson(String json) {
         try {
             return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, PresenceMessage.class);
@@ -40,7 +34,6 @@ public class PresenceMessage implements Serializable {
         }
     }
 
-    // Getters & setters
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
 

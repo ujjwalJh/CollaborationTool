@@ -1,4 +1,3 @@
-/* FULLSCREEN PAGE */
 .register-page {
   height: 100vh;
   width: 100%;
@@ -9,7 +8,6 @@
   font-family: "Poppins", sans-serif;
 }
 
-/* CARD */
 .register-card {
   width: 440px;
   padding: 40px;
@@ -22,7 +20,6 @@
   animation: fadeIn 0.5s ease;
 }
 
-/* TITLE */
 .register-card h2 {
   text-align: center;
   font-size: 26px;
@@ -42,7 +39,7 @@
   text-decoration: none;
 }
 
-/* LABELS */
+
 .register-card label {
   display: block;
   margin: 16px 0 6px;
@@ -50,7 +47,7 @@
   font-size: 14px;
 }
 
-/* INPUT WRAPPER WITH ICON */
+
 .input-wrapper {
   position: relative;
 }
@@ -64,7 +61,7 @@
   opacity: 0.75;
 }
 
-/* INPUTS */
+
 .register-card input {
   width: 100%;
   padding: 12px 14px 12px 42px;
@@ -80,7 +77,6 @@
   background: #181818;
 }
 
-/* BUTTON */
 .register-card button {
   margin-top: 25px;
   width: 100%;
@@ -102,7 +98,6 @@
   background: #3a3a3a;
 }
 
-/* ERROR BOX */
 .register-error {
   background: rgba(255, 50, 50, 0.12);
   padding: 10px;
@@ -113,7 +108,6 @@
   color: #ff9d9d;
 }
 
-/* FADE-IN ANIMATION */
 @keyframes fadeIn {
   from {
     opacity: 0;

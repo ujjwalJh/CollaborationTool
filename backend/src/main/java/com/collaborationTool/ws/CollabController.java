@@ -26,16 +26,6 @@ public class CollabController {
         this.docRepository = docRepository;
     }
 
-    /**
-     * MAIN REAL-TIME EDIT HANDLER
-     * ---------------------------
-     * Handles:
-     *   ✔ ProseMirror steps (if ever used)
-     *   ✔ Delta patches (fallback)
-     *   ✔ Full JSON content (TipTap JSON)
-     *
-     * Your frontend uses FULL CONTENT syncing.
-     */
     @MessageMapping("/edit")
     public void onEdit(EditMessage edit) {
         try {
@@ -55,7 +45,6 @@ public class CollabController {
             log.info("onEdit → docId={}  user={}  clientId={}",
                     docId, edit.getUser(), edit.getClientId());
 
-            // ========== 1) BROADCAST FULL CONTENT (your frontend uses this) ==========
             String content = edit.getContent();
             if (content != null) {
 
@@ -70,7 +59,6 @@ public class CollabController {
 
                 log.debug("Broadcasted full-content update → {}", topic);
 
-                // Persist to DB
                 try {
                     Long id = Long.valueOf(docId);
                     docRepository.findById(id).ifPresent(doc -> {
@@ -83,10 +71,9 @@ public class CollabController {
                     log.error("Failed to persist doc {} -> {}", docId, e.getMessage());
                 }
 
-                return; // <-- THIS prevents falling into step/delta blocks
+                return; 
             }
 
-            // ========== 2) PROSEMIRROR STEPS (not used right now but supported) ==========
             List<Object> steps = edit.getSteps();
             if (steps != null && !steps.isEmpty()) {
 
@@ -102,8 +89,6 @@ public class CollabController {
                 log.debug("Broadcasted steps → {} ({} steps)", topic, steps.size());
                 return;
             }
-
-            // ========== 3) DELTA PATCH FALLBACK ==========
             if (edit.getFrom() != null && edit.getTo() != null && edit.getText() != null) {
 
                 Map<String, Object> delta = new HashMap<>();
@@ -125,18 +110,4 @@ public class CollabController {
             log.error("Unhandled error in /edit handler: {}", e.getMessage(), e);
         }
     }
-
-    /**
-     * PRESENCE / CURSOR HANDLER
-     */
-    // @MessageMapping("/presence")
-    // public void onPresence(PresenceMessage p) {
-    //     if (p == null || p.getDocId() == null) {
-    //         log.warn("Invalid presence message: {}", p);
-    //         return;
-    //     }
-
-    //     final String topic = "/topic/presence." + p.getDocId();
-    //     messaging.convertAndSend(topic, p);
-    // }
 }

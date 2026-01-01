@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from "react";
 import api from "../api/axios";
 import { jwtDecode } from "jwt-decode"; // <- fixed import (default)
@@ -8,8 +7,6 @@ export const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem("token"));
-
-  // Load user from token on refresh
   useEffect(() => {
     if (!token) {
       setUser(null);
@@ -18,8 +15,6 @@ export function AuthProvider({ children }) {
 
     try {
       const decoded = jwtDecode(token);
-
-      // token structure usually has `exp` in seconds
       if (decoded && decoded.exp && decoded.exp * 1000 < Date.now()) {
         logout();
         return;
@@ -27,13 +22,11 @@ export function AuthProvider({ children }) {
 
       setUser({ email: decoded.sub, username: decoded.username ?? null });
     } catch (err) {
-      // If decode fails we must remove bad token
       console.warn("Invalid token, logging out", err);
       logout();
     }
   }, [token]);
 
-  // Login
   const login = async (email, password) => {
     try {
       const res = await api.post("/api/auth/login", { email, password });
@@ -51,7 +44,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Register
   const register = async (username, email, password) => {
     try {
       const res = await api.post("/api/auth/register", {
@@ -76,14 +68,12 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Logout
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
     setToken(null);
     setUser(null);
-    // don't forcibly redirect here — let callers decide. If you want redirect:
-    // window.location.href = "/login";
   };
 
   return (

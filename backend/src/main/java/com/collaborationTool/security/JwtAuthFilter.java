@@ -1,4 +1,3 @@
-// src/main/java/com/collaborationTool/security/JwtAuthFilter.java
 package com.collaborationTool.security;
 
 import java.io.IOException;
@@ -35,13 +34,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // Skip JWT validation for WebSocket handshake endpoints
+        
         if (path.startsWith("/ws")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Skip JWT for login/register
         if (path.equals("/api/auth/login") || path.equals("/api/auth/register")) {
             filterChain.doFilter(request, response);
             return;

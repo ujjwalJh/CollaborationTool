@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 
@@ -33,11 +34,11 @@ public class RedisConfig {
                                                         MessageListenerAdapter listenerAdapter) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        // subscribe to prefix topics if you want; here we used per-doc channel e.g. "presence:{docId}"
-        // For message adapter subscription you can use a pattern topic if you prefer:
-        // container.addMessageListener(listenerAdapter, new PatternTopic("presence:*"));
-        // Or subscribe to a specific topic name used by your code.
-        container.addMessageListener(listenerAdapter, new org.springframework.data.redis.listener.ChannelTopic("presence"));
+        
+        container.addMessageListener(
+            listenerAdapter,
+            new PatternTopic("presence:*")
+        );
         return container;
     }
 

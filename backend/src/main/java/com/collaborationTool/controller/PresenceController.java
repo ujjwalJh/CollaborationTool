@@ -7,10 +7,6 @@ import org.springframework.stereotype.Controller;
 import com.collaborationTool.service.PresenceService;
 import com.collaborationTool.ws.PresenceMessage;
 
-/**
- * Receives presence messages from clients (via /app/presence).
- * Tracks session -> doc membership (so disconnects can be handled).
- */
 @Controller
 public class PresenceController {
 
@@ -25,17 +21,11 @@ public class PresenceController {
         if (msg == null || msg.getDocId() == null || msg.getType() == null) return;
 
         String sessionId = headers.getSessionId();
-        // track membership for join/leave
-        if ("join".equals(msg.getType())) {
-            if (sessionId != null) presenceService.registerSessionDoc(sessionId, msg.getDocId());
-        } else if ("leave".equals(msg.getType())) {
-            if (sessionId != null) presenceService.unregisterSessionDoc(sessionId, msg.getDocId());
+        if (msg.getClientId() == null && sessionId != null) {
+            msg.setClientId(sessionId);
         }
-
-        // attach client session id if not present
-        if (msg.getClientId() == null && sessionId != null) msg.setClientId(sessionId);
-        System.out.println("RECEIVED Presence message = " + msg);
-        // publish (local + redis)
         presenceService.publish(msg);
+
+        System.out.println("REDIS PUBLISHED presence = " + msg);
     }
 }

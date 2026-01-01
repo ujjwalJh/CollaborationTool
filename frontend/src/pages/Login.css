@@ -1,4 +1,3 @@
-/* FULLSCREEN LOGIN PAGE */
 .login-page {
   height: 100vh;
   width: 100%;
@@ -11,7 +10,6 @@
   font-family: "Poppins", sans-serif;
 }
 
-/* LOGIN CARD */
 .login-card {
   width: 420px;
   padding: 40px;
@@ -24,7 +22,6 @@
   animation: fadeIn 0.5s ease;
 }
 
-/* TITLE */
 .login-card h2 {
   text-align: center;
   font-size: 27px;
@@ -44,15 +41,12 @@
   text-decoration: none;
 }
 
-/* LABEL */
 .login-card label {
   display: block;
   margin: 16px 0 6px;
   color: #c5c5c5;
   font-size: 14px;
 }
-
-/* INPUT WRAPPER WITH ICON */
 .input-wrapper {
   position: relative;
 }
@@ -65,8 +59,6 @@
   font-size: 17px;
   opacity: 0.7;
 }
-
-/* INPUT FIELDS */
 .login-card input {
   width: 100%;
   padding: 12px 14px 12px 40px;
@@ -84,7 +76,6 @@
   border-color: #6c4dff;
 }
 
-/* OPTIONS ROW */
 .login-options {
   margin-top: 12px;
   display: flex;
@@ -97,7 +88,6 @@
   color: #9b7cff;
 }
 
-/* LOGIN BUTTON */
 .login-card button {
   width: 100%;
   padding: 13px;
@@ -119,7 +109,6 @@
   background: #333;
 }
 
-/* ERROR BOX */
 .login-error {
   background: rgba(255, 40, 40, 0.15);
   border: 1px solid rgba(255, 40, 40, 0.35);
@@ -130,7 +119,6 @@
   margin-bottom: 10px;
 }
 
-/* FADE IN ANIMATION */
 @keyframes fadeIn {
   from {
     opacity: 0;

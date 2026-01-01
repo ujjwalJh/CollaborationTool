@@ -21,15 +21,13 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserRepository userRepository;
-
-    // 👥 Get all users (ADMIN only)
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // 👤 Get user by email (any authenticated user)
+    
     @GetMapping("/{email}")
     public User getUserByEmail(@PathVariable String email) {
         return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));

@@ -1,29 +1,72 @@
-/* src/pages/editor.css */
 .editor-page {
-  color: white;
   min-height: 100vh;
+  background: #0f1115;
+  color: #e6eef8;
+  display: flex;
+  flex-direction: column;
 }
 
-/* style the editor area */
-.editor-box .ProseMirror {
-  min-height: 300px;
-  outline: none;
-  white-space: pre-wrap; /* <--- important for ProseMirror / TipTap */
+.presence-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: #12151b;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.presence-pill {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
   color: #e6eef8;
+  white-space: nowrap;
+}
+.editor-container {
+  padding: 20px;
+  flex: 1;
+}
+
+.editor-textarea {
+  width: 100%;
+  height: 500px;
+  resize: none;
+  background: #0f1115;
+  color: #e6eef8;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 12px;
   font-size: 16px;
   line-height: 1.45;
+  outline: none;
+  white-space: pre-wrap;
+  font-family: monospace;
+  white-space: pre;         
+  overflow-x: auto;  
 }
 
-/* toolbar */
-.toolbar button {
-  margin-right: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
-  color: white;
-  cursor: pointer;
+.editor-textarea:focus {
+  border-color: #3b82f6;
 }
-.toolbar button:hover {
-  background: rgba(255,255,255,0.03);
+.editor-wrapper {
+  position: relative;
+}
+
+.remote-cursor {
+  position: absolute;
+  pointer-events: none;
+}
+
+
+.remote-caret {
+  width: 2px;
+  height: 20px;
+  background: #ef4444;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }

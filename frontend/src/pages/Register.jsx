@@ -1,4 +1,3 @@
-// pages/Register.jsx
 import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -39,7 +38,6 @@ export default function Register() {
 
         <form onSubmit={handleSubmit}>
 
-          {/* Username */}
           <label>Username</label>
           <div className="input-wrapper">
             <span className="input-icon">👤</span>
@@ -52,7 +50,6 @@ export default function Register() {
             />
           </div>
 
-          {/* Email */}
           <label>Email Address</label>
           <div className="input-wrapper">
             <span className="input-icon">📧</span>
@@ -65,7 +62,6 @@ export default function Register() {
             />
           </div>
 
-          {/* Password */}
           <label>Password</label>
           <div className="input-wrapper">
             <span className="input-icon">🔒</span>

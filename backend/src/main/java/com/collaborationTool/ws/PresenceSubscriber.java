@@ -19,8 +19,6 @@ public class PresenceSubscriber implements MessageListener {
         try {
             String json = new String(message.getBody());
             PresenceMessage msg = PresenceMessage.fromJson(json);
-
-            // only publish to local WebSockets
             presenceService.publishLocal(msg);
 
         } catch (Exception e) {

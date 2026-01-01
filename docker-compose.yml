@@ -26,17 +26,20 @@ services:
     networks:
       - app-network
 
-  backend:
+  # ==========================
+  # BACKEND INSTANCE 1
+  # ==========================
+  backend_1:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: collab_backend
+    container_name: collab_backend_1
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_REDIS_HOST: redis       # <— CORRECT
+      SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
     ports:
-      - "8080:8080"
+      - "8081:8080"
     depends_on:
       - postgres
       - redis
@@ -44,6 +47,30 @@ services:
     networks:
       - app-network
 
+  # ==========================
+  # BACKEND INSTANCE 2
+  # ==========================
+  backend_2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: collab_backend_2
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+      - redis
+    restart: always
+    networks:
+      - app-network
+
+  # ==========================
+  # FRONTEND (unchanged)
+  # ==========================
   frontend:
     build:
       context: ./frontend
@@ -59,7 +86,7 @@ services:
       CHOKIDAR_USEPOLLING: true
       WATCHPACK_POLLING: true
     depends_on:
-      - backend
+      - backend_1
     restart: unless-stopped
     networks:
       - app-network
@@ -70,3 +97,83 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+
+
+
+
+
+
+
+
+# services:
+
+#   postgres:
+#     image: postgres:16
+#     container_name: theproject_postgres
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: 0
+#       POSTGRES_DB: collaboration_db
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     restart: always
+#     networks:
+#       - app-network
+
+#   redis:
+#     image: redis:7-alpine
+#     container_name: collab_redis
+#     restart: always
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_data:/data
+#     networks:
+#       - app-network
+
+#   backend:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     container_name: collab_backend
+#     environment:
+#       SPRING_PROFILES_ACTIVE: docker
+#       SPRING_REDIS_HOST: redis       # <— CORRECT
+#       SPRING_REDIS_PORT: 6379
+#     ports:
+#       - "8080:8080"
+#     depends_on:
+#       - postgres
+#       - redis
+#     restart: always
+#     networks:
+#       - app-network
+
+#   frontend:
+#     build:
+#       context: ./frontend
+#       dockerfile: Dockerfile
+#     container_name: collab_frontend
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       - ./frontend:/app
+#       - /app/node_modules
+#     environment:
+#       NODE_ENV: development
+#       CHOKIDAR_USEPOLLING: true
+#       WATCHPACK_POLLING: true
+#     depends_on:
+#       - backend
+#     restart: unless-stopped
+#     networks:
+#       - app-network
+
+# networks:
+#   app-network:
+
+# volumes:
+#   postgres_data:
+#   redis_data:

@@ -28,20 +28,19 @@ public class TeamController {
     @Autowired
     private UserRepository userRepository;
 
-    // ✅ Create a new team
+
     @PostMapping
     public ResponseEntity<Team> createTeam(@RequestBody Team team) {
         Team saved = teamRepository.save(team);
         return ResponseEntity.ok(saved);
     }
 
-    // ✅ Get all teams
+
     @GetMapping
     public List<Team> getAllTeams() {
         return teamRepository.findAll();
     }
 
-    // ✅ Add a user to a team
     @PostMapping("/{teamId}/addMember/{userId}")
     public ResponseEntity<?> addMember(@PathVariable Long teamId, @PathVariable Long userId) {
         Optional<Team> teamOpt = teamRepository.findById(teamId);
@@ -60,7 +59,6 @@ public class TeamController {
         return ResponseEntity.ok(team);
     }
 
-    // ✅ Get members of a team
     @GetMapping("/{teamId}/members")
     public ResponseEntity<Set<User>> getMembers(@PathVariable Long teamId) {
         return teamRepository.findById(teamId)

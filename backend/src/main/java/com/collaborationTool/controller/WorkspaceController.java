@@ -42,10 +42,7 @@ public class WorkspaceController {
         public String name;
     }
 
-    /**
-     * Create workspace.
-     * Owner is taken from authenticated user and added to members set automatically.
-     */
+    
     @PostMapping
     public ResponseEntity<?> createWorkspace(@RequestBody CreateWorkspaceRequest payload, Authentication auth) {
         if (payload == null || payload.name == null || payload.name.isBlank()) {
@@ -61,7 +58,7 @@ public class WorkspaceController {
                 .owner(owner)
                 .build();
 
-        // Owner must be in members set too
+        
         ws.getMembers().add(owner);
 
         workspaceRepository.save(ws);
@@ -69,33 +66,24 @@ public class WorkspaceController {
         return ResponseEntity.created(URI.create("/api/workspaces/" + ws.getId())).body(ws);
     }
 
-    /**
-     * List all (rarely used).
-     */
     @GetMapping
     public List<Workspace> listAll() {
         return workspaceRepository.findAll();
     }
 
-    /**
-     * Workspaces owned by given user id.
-     */
+    
     @GetMapping("/owner/{ownerId}")
     public List<Workspace> listByOwner(@PathVariable Long ownerId) {
         return workspaceRepository.findByOwnerId(ownerId);
     }
 
-    /**
-     * Workspaces where user is a member (shared with me).
-     */
+
     @GetMapping("/member/{userId}")
     public List<Workspace> listByMember(@PathVariable Long userId) {
         return workspaceRepository.findByMembersId(userId);
     }
 
-    /**
-     * Get a single workspace — only owner or members can view.
-     */
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getWorkspace(@PathVariable Long id, Authentication auth) {
         Optional<Workspace> opt = workspaceRepository.findById(id);
@@ -112,9 +100,7 @@ public class WorkspaceController {
         return ResponseEntity.ok(ws);
     }
 
-    /**
-     * Owner-only: rename a workspace.
-     */
+
     @PutMapping("/{id}/rename")
     public ResponseEntity<?> renameWorkspace(@PathVariable Long id,
                                              @RequestBody RenameWorkspaceRequest payload,
@@ -139,9 +125,7 @@ public class WorkspaceController {
         return ResponseEntity.ok(ws);
     }
 
-    /**
-     * Owner-only: delete workspace.
-     */
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteWorkspace(@PathVariable Long id, Authentication auth) {
         Optional<Workspace> opt = workspaceRepository.findById(id);
@@ -159,9 +143,7 @@ public class WorkspaceController {
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Owner-only: add a member by userId.
-     */
+
     @PostMapping("/{workspaceId}/addMember/{userId}")
     public ResponseEntity<?> addMember(@PathVariable Long workspaceId,
                                        @PathVariable Long userId,
@@ -185,9 +167,7 @@ public class WorkspaceController {
         return ResponseEntity.ok(ws);
     }
 
-    /**
-     * Owner-only: remove a member.
-     */
+
     @PostMapping("/{workspaceId}/removeMember/{userId}")
     public ResponseEntity<?> removeMember(@PathVariable Long workspaceId,
                                           @PathVariable Long userId,
@@ -205,7 +185,6 @@ public class WorkspaceController {
             return ResponseEntity.status(403).body("Only owner can remove members");
         }
 
-        // Prevent removing owner
         if (ws.getOwner() != null && ws.getOwner().getId().equals(userId)) {
             return ResponseEntity.badRequest().body("Cannot remove owner from workspace");
         }
@@ -215,9 +194,7 @@ public class WorkspaceController {
         return ResponseEntity.ok(ws);
     }
 
-    /**
-     * Member: leave workspace. Owner cannot leave — they must assign a new owner first.
-     */
+
     @PostMapping("/{workspaceId}/leave")
     public ResponseEntity<?> leaveWorkspace(@PathVariable Long workspaceId, Authentication auth) {
         var wsOpt = workspaceRepository.findById(workspaceId);
@@ -229,12 +206,10 @@ public class WorkspaceController {
 
         if (caller == null) return ResponseEntity.status(403).body("Forbidden");
 
-        // If caller is owner, do not allow leaving
         if (permissionService.isOwner(caller, ws)) {
             return ResponseEntity.badRequest().body("Owner cannot leave workspace. Assign a new owner before leaving.");
         }
 
-        // Remove from members (id equality)
         boolean removed = ws.getMembers().removeIf(u -> u.getId() != null && u.getId().equals(caller.getId()));
         if (removed) {
             workspaceRepository.save(ws);

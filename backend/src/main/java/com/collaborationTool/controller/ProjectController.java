@@ -27,7 +27,6 @@ public class ProjectController {
     @Autowired
     private TeamRepository teamRepository;
 
-    // ✅ Create a project under a team
     @PostMapping("/team/{teamId}")
     public ResponseEntity<?> createProject(@PathVariable Long teamId, @RequestBody Project project) {
         Optional<Team> teamOpt = teamRepository.findById(teamId);
@@ -40,13 +39,12 @@ public class ProjectController {
         return ResponseEntity.ok(saved);
     }
 
-    // ✅ Get all projects
     @GetMapping
     public List<Project> getAllProjects() {
         return projectRepository.findAll();
     }
 
-    // ✅ Get all projects for a team
+
     @GetMapping("/team/{teamId}")
     public ResponseEntity<List<Project>> getProjectsByTeam(@PathVariable Long teamId) {
         Optional<Team> teamOpt = teamRepository.findById(teamId);

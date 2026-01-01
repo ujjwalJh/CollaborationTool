@@ -23,45 +23,33 @@ public class PresenceService {
 
     private static final String CHANNEL_PREFIX = "presence:";
 
-    // Track sessions → docs
     private final ConcurrentHashMap<String, Set<String>> sessionDocs = new ConcurrentHashMap<>();
 
-    /** ----------------------------  
-     *  Publish to Redis (cross-server)
-     * ---------------------------- */
     public void publish(PresenceMessage msg) {
-        try {
-            String json = mapper.writeValueAsString(msg);
-            String channel = CHANNEL_PREFIX + msg.getDocId();
-            redis.convertAndSend(channel, json);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    try {
+        publishLocal(msg);
 
-    /** ----------------------------  
-     *  Publish to local WebSocket clients only 
-     * ---------------------------- */
+        String json = mapper.writeValueAsString(msg);
+        String channel = CHANNEL_PREFIX + msg.getDocId();
+        redis.convertAndSend(channel, json);
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
     public void publishLocal(PresenceMessage message) {
         messaging.convertAndSend("/topic/presence." + message.getDocId(), message);
     }
 
-    /** ----------------------------  
-     *  SESSION TRACKING
-     * ---------------------------- */
-
-    // When a user opens a doc: register mapping
     public void registerSessionDoc(String sessionId, String docId) {
         sessionDocs.computeIfAbsent(sessionId, s -> ConcurrentHashMap.newKeySet())
                    .add(docId);
     }
 
-    // On WS disconnect: retrieve docs for the session
     public Set<String> getDocsForSession(String sessionId) {
         return sessionDocs.getOrDefault(sessionId, Collections.emptySet());
     }
 
-    // After cleanup
     public void unregisterSessionDoc(String sessionId, String docId) {
         Set<String> docs = sessionDocs.get(sessionId);
         if (docs != null) {

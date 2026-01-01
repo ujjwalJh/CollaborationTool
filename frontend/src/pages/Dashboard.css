@@ -1,4 +1,4 @@
-/* PAGE LAYOUT */
+
 .dash-page {
   height: 100vh;
   width: 100%;
@@ -8,7 +8,7 @@
   color: #eee;
 }
 
-/* SIDEBAR */
+
 .dash-sidebar {
   width: 260px;
   padding: 35px 25px;

@@ -34,8 +34,6 @@ public class Doc {
     @ManyToOne
     @JoinColumn(name = "workspace_id", nullable = false)
     private Workspace workspace;
-
-    // store TipTap JSON as text
     @Column(columnDefinition = "TEXT")
     private String content;
 

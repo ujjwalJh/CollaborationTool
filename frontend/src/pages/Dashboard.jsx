@@ -1,4 +1,3 @@
-// src/pages/Dashboard.jsx
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
@@ -17,29 +16,21 @@ export default function Dashboard() {
   const [docs, setDocs] = useState([]);
   const [newWsName, setNewWsName] = useState("");
   const [newDocTitle, setNewDocTitle] = useState("");
-
-  // Owner-only UI state
   const [addMemberEmail, setAddMemberEmail] = useState("");
   const [renameName, setRenameName] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Load user + workspace lists
   useEffect(() => {
     setLoading(true);
     api
       .get("/api/auth/me")
       .then((res) => {
         setMe(res.data);
-
-        // Owned workspaces
         api
           .get(`/api/workspaces/owner/${res.data.id}`)
           .then((r) => setOwnedWorkspaces(r.data))
           .catch(() => setOwnedWorkspaces([]));
-
-        // Member workspaces
-        // Member workspaces (exclude workspaces where user is owner)
         api
           .get(`/api/workspaces/member/${res.data.id}`)
           .then((r) => {
@@ -48,15 +39,15 @@ export default function Dashboard() {
           })        
       })
       .catch(() => {
-        // Token invalid or unauthorized
+    
         logout();
         window.location.href = "/login";
       })
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
-  // Load docs for selected workspace
+  
   useEffect(() => {
     if (!selectedWorkspace) {
       setDocs([]);
@@ -71,7 +62,7 @@ export default function Dashboard() {
       });
   }, [selectedWorkspace]);
 
-  // Helpers
+  
   const refreshWorkspaces = async () => {
     if (!me) return;
     try {
@@ -81,7 +72,6 @@ export default function Dashboard() {
       ]);
       setOwnedWorkspaces(ownedRes.data);
       setMemberWorkspaces(memberRes.data);
-      // If selected workspace was removed, deselect
       if (
         selectedWorkspace &&
         ![...ownedRes.data, ...memberRes.data].some((w) => w.id === selectedWorkspace.id)
@@ -130,19 +120,17 @@ export default function Dashboard() {
     logout();
     window.location.href = "/login";
   };
-
-  // Add member by email (owner-only)
   const handleAddMember = async () => {
     if (!addMemberEmail.trim() || !selectedWorkspace) return alert("Provide member email");
     try {
-      // Find user by email
+    
       const userRes = await api.get(`/api/users/${encodeURIComponent(addMemberEmail.trim())}`);
       const user = userRes.data;
       await api.post(`/api/workspaces/${selectedWorkspace.id}/addMember/${user.id}`);
       alert("Member added");
       setAddMemberEmail("");
       await refreshWorkspaces();
-      // re-fetch selected workspace (to update members)
+    
       const refreshed = (await api.get(`/api/workspaces/${selectedWorkspace.id}`)).data;
       setSelectedWorkspace(refreshed);
     } catch (err) {
@@ -153,7 +141,7 @@ export default function Dashboard() {
     }
   };
 
-  // Remove member (owner-only)
+  
   const handleRemoveMember = async (userId) => {
     if (!selectedWorkspace) return;
     if (!confirm("Remove this member from workspace?")) return;
@@ -169,16 +157,15 @@ export default function Dashboard() {
     }
   };
 
-  // Leave workspace (member)
+  
   const handleLeaveWorkspace = async () => {
     if (!selectedWorkspace) return;
-    // prevent owner leaving
     if (selectedWorkspace.owner && selectedWorkspace.owner.id === me.id) {
       return alert("Owner cannot leave; transfer ownership first");
     }
     if (!confirm(`Leave workspace "${selectedWorkspace.name}"?`)) return;
     try {
-      // We'll reuse removeMember endpoint: remove current user from workspace
+      
       await api.post(
         `/api/workspaces/${selectedWorkspace.id}/removeMember/${me.id}`
       );
@@ -191,7 +178,6 @@ export default function Dashboard() {
     }
   };
 
-  // Rename workspace (owner-only)
   const handleRenameWorkspace = async () => {
     if (!renameName.trim() || !selectedWorkspace) return alert("New name required");
     try {
@@ -209,7 +195,6 @@ export default function Dashboard() {
     }
   };
 
-  // Delete workspace (owner-only)
   const handleDeleteWorkspace = async () => {
     if (!selectedWorkspace) return;
     if (!confirm(`Permanently delete workspace "${selectedWorkspace.name}"? This is irreversible.`))
@@ -224,13 +209,9 @@ export default function Dashboard() {
       alert("Failed to delete workspace");
     }
   };
-
-  // Utility: determine if current user is owner / member of selected workspace
   const isOwner = (ws) => ws && me && ws.owner && ws.owner.id === me.id;
   const isMember = (ws) =>
     ws && ws.members && me && ws.members.some((m) => m.id === me.id);
-
-  // UI render
   if (loading) {
     return <div style={{ padding: 40 }}>Loading...</div>;
   }
@@ -248,7 +229,6 @@ export default function Dashboard() {
           <p>{me.email}</p>
         </div>
 
-        {/* New Workspace */}
         <div style={{ margin: "10px 0", width: "100%" }}>
           <input
             style={{ width: "100%", padding: 8, borderRadius: 6, border: "none", marginBottom: 8 }}
@@ -261,7 +241,6 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Owned Workspaces */}
         <div style={{ width: "100%", marginTop: 18 }}>
           <h4>Your Workspaces</h4>
           <ul style={{ listStyle: "none", padding: 0 }}>
@@ -288,7 +267,6 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        {/* Member Workspaces */}
         <div style={{ width: "100%", marginTop: 20 }}>
           <h4>Shared With You</h4>
           <ul style={{ listStyle: "none", padding: 0 }}>
@@ -326,7 +304,6 @@ export default function Dashboard() {
 
         {selectedWorkspace && (
           <>
-            {/* Owner actions */}
             <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
               {isOwner(selectedWorkspace) ? (
                 <>
@@ -353,7 +330,6 @@ export default function Dashboard() {
 
                   <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
                     <button onClick={() => {
-                      // quick add UI focus
                       const el = document.getElementById("add-member-email");
                       if (el) el.focus();
                     }}>Add member</button>
@@ -374,7 +350,7 @@ export default function Dashboard() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 20 }}>
-              {/* LEFT: Members + add member */}
+              
               <div className="dash-card">
                 <h3>Members</h3>
                 <p style={{ marginTop: 6, marginBottom: 12, color: "#c1c1c1" }}>
@@ -411,7 +387,7 @@ export default function Dashboard() {
                   ))}
                 </ul>
 
-                {/* Add member (owner-only) */}
+              
                 {isOwner(selectedWorkspace) && (
                   <div style={{ marginTop: 12 }}>
                     <input
@@ -428,7 +404,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* RIGHT: Docs */}
+              
               <div>
                 <div className="dash-card" style={{ marginBottom: 16 }}>
                   <h3>Documents</h3>

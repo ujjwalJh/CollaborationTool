@@ -1,4 +1,3 @@
-// frontend/src/ws/socket.js
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
@@ -7,14 +6,9 @@ let state = "idle";
 // idle | connecting | connected | disconnecting
 
 const WS_URL = "http://localhost:8080/ws";
-
-/* -------------------------------------------------------
-   CONNECT
--------------------------------------------------------- */
 export async function connectWs({ token, docId, onConnect, onMessage }) {
   console.log("[WS] connectWs() called — state:", state);
 
-  // Prevent race conditions
   if (state === "connecting") {
     console.log("[WS] Already connecting…");
     return;
@@ -76,9 +70,7 @@ export async function connectWs({ token, docId, onConnect, onMessage }) {
   }
 }
 
-/* -------------------------------------------------------
-   DISCONNECT
--------------------------------------------------------- */
+
 export async function disconnectWs() {
   console.log("[WS] disconnectWs() called — state:", state);
 
@@ -102,9 +94,7 @@ export async function disconnectWs() {
   state = "idle";
 }
 
-/* -------------------------------------------------------
-   SEND EDIT
--------------------------------------------------------- */
+
 export function sendEdit(payload) {
   if (state !== "connected" || !stompClient) {
     console.warn("[WS] Cannot send edit — not connected");
@@ -117,9 +107,7 @@ export function sendEdit(payload) {
   });
 }
 
-/* -------------------------------------------------------
-   SEND PRESENCE
--------------------------------------------------------- */
+
 export function sendPresence(payload) {
   if (state !== "connected" || !stompClient) {
     console.warn("[WS] Cannot send presence — not connected");

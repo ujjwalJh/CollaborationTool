@@ -22,16 +22,6 @@ import com.collaborationTool.security.JwtUtil;
 import com.collaborationTool.service.PermissionService;
 
 import lombok.RequiredArgsConstructor;
-
-/**
- * WebSocket STOMP security:
- *
- *  - CONNECT: Validate JWT and attach Principal
- *  - SUBSCRIBE: Verify workspace permission for topic (doc or presence)
- * 
- * FIXED: Principal is now stored in session attributes so SUBSCRIBE 
- * always receives the authenticated user (even with SockJS).
- */
 @Component
 @RequiredArgsConstructor
 public class JwtHandshakeInterceptor implements ChannelInterceptor {
@@ -48,10 +38,6 @@ public class JwtHandshakeInterceptor implements ChannelInterceptor {
 
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
         StompCommand command = accessor.getCommand();
-
-        /* =======================================================
-         * CONNECT — Validate JWT and store Principal in session
-         * ======================================================= */
         if (StompCommand.CONNECT.equals(command)) {
 
             String authHeader = accessor.getFirstNativeHeader("Authorization");
@@ -86,13 +72,8 @@ public class JwtHandshakeInterceptor implements ChannelInterceptor {
             log.info("WS CONNECT authenticated: {}", email);
             return message;
         }
-
-        /* =======================================================
-         * SUBSCRIBE — Validate access to doc/presence channel
-         * ======================================================= */
         if (StompCommand.SUBSCRIBE.equals(command)) {
 
-            // Retrieve principal from accessor or session map
             Principal principal = accessor.getUser();
             if (principal == null) {
                 principal = (Principal) accessor.getSessionAttributes().get("USER_PRINCIPAL");
@@ -144,13 +125,7 @@ public class JwtHandshakeInterceptor implements ChannelInterceptor {
         return message;
     }
 
-    /* =======================================================
-     * Extract docId from:
-     *   /topic/doc.123
-     *   /topic/presence.123
-     *   /topic/doc/123
-     *   /topic/presence/123
-     * ======================================================= */
+    
     private Long extractDocIdFromDestination(String destination) {
 
         List<String> prefixes = List.of("/topic/doc.", "/topic/presence.", "/topic/presence/");
