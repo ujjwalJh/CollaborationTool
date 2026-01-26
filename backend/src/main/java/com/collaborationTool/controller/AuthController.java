@@ -12,14 +12,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.collaborationTool.dto.JwtResponse;
+import com.collaborationTool.dto.LoginRequest;
 import com.collaborationTool.dto.RegisterRequest;
 import com.collaborationTool.model.User;
 import com.collaborationTool.repository.UserRepository;
 import com.collaborationTool.security.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -49,16 +54,25 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Map<String, String> login(@RequestBody User user) {
-        var dbUser = userRepository.findByEmail(user.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (!passwordEncoder.matches(user.getPassword(), dbUser.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest req) {
+    // log.info("Login attempt for email: {}", req.email());
+        User user = userRepository.findByEmail(req.email())
+                .orElseThrow(() -> {
+                    log.error("Invalid credentials for email: {}");
+                    return new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Invalid credentials"
+                    );
+                });
+    
+        if (!passwordEncoder.matches(req.password(), user.getPassword())) {
+            log.error("Invalid password");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Invalid credentials"
+            );
         }
-
-        String token = jwtUtil.generateToken(dbUser.getEmail());
-        return Map.of("token", token);
+    
+        String token = jwtUtil.generateToken(user.getEmail());
+        return ResponseEntity.ok(new JwtResponse(token));
     }
 
     @GetMapping("/me")

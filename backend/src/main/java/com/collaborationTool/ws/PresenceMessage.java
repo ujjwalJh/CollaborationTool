@@ -5,6 +5,13 @@ import java.io.Serializable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Getter
+@Setter
 public class PresenceMessage implements Serializable {
 
     private String type;
@@ -14,42 +21,23 @@ public class PresenceMessage implements Serializable {
     private String clientId;
     private Object cursor;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-
     public PresenceMessage() {}
 
     public String toJson() {
         try {
-            return mapper.writeValueAsString(this);
+            return new ObjectMapper().writeValueAsString(this);
         } catch (JsonProcessingException e) {
+            log.error("Failed to serialize PresenceMessage: {}", this, e);
             throw new RuntimeException("Failed to serialize PresenceMessage", e);
         }
     }
 
     public static PresenceMessage fromJson(String json) {
         try {
-            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, PresenceMessage.class);
+            return new ObjectMapper().readValue(json, PresenceMessage.class);
         } catch (Exception e) {
+            log.error("Failed to deserialize PresenceMessage from json: {}", json, e);
             throw new RuntimeException(e);
         }
     }
-
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-
-    public String getDocId() { return docId; }
-    public void setDocId(String docId) { this.docId = docId; }
-
-    public String getUser() { return user; }
-    public void setUser(String user) { this.user = user; }
-
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-
-    public String getClientId() { return clientId; }
-    public void setClientId(String clientId) { this.clientId = clientId; }
-
-    public Object getCursor() { return cursor; }
-    public void setCursor(Object cursor) { this.cursor = cursor; }
-    
 }

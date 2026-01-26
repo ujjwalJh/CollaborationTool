@@ -23,7 +23,9 @@ import com.collaborationTool.repository.WorkspaceRepository;
 import com.collaborationTool.service.PermissionService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/workspaces")
 @RequiredArgsConstructor
@@ -158,6 +160,7 @@ public class WorkspaceController {
         User caller = userRepository.findByEmail(email).orElse(null);
 
         if (!permissionService.isOwner(caller, ws)) {
+            log.error("Only owner can add members");
             return ResponseEntity.status(403).body("Only owner can add members");
         }
 
